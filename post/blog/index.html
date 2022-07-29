@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en-us" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content='在上一篇博客的基础上，结合手势识别和实验室的unitreeA1机器狗做了一个机器狗的手势控制,可以实现手势控制机器狗的前后左右平动。
+前期准备 1、需要对ROS的话题通信机制及其环境配置有一定了解。 2、建议先在Windows上跑通上一篇博客的手势识别模型再来进行机器狗的手势控制。 3、宇树A1机器狗，GO1以及其他机器狗的配置同理。 4、机器狗内置电脑上的环境配置： ①Python版本应为3.8（必要条件） ②视觉识别依赖包：Opencv,Mediapipe,; ③Unitree官方发布的ROS_to_Real包，版本选择最早发布的版本（或unitree后续发布的支持A1机器狗的版本）。 ④ROS开发环境建议用VScode。 ⑤在Windows下载VncViewer以进行远程桌面连接，防止调试运动程序过程中损坏机器狗。 ⑥由于ROS Melodic所用为Python2，但Mediapipe和Opencv支持的版本为Python3.8，因此需要进行虚拟环境配置，下文会详细展开。
+环境配置教程 2.1 ROS_to_Real包以及SDK的编译安装 这一部分需要先认真阅读官方的Readme文档，确认各种依赖以及版本都是正确的。 官方网址：unitreerobotics/unitree_ros_to_real (github.com) 首先进入主文件夹，输入 ：
+git clone https://github.com/unitreerobotics/unitree_legged_sdk.git //也可以采用镜像源 // git clone https://github.com.cnpmjs.org/unitreerobotics/unitree_legged_sdk.git //也可以直接用自己的电脑到官网下载，然后再用U盘拷贝到机器狗上即可，记得先看Readme里支持的版本。 输入cd unitree_legged_sdk/进入文件夹 然后按照readme里的步骤，在终端依次输入
+mkdir build cd build cmake ../ make 接着创建工作空间，安装宇树的功能包
+mkdir unitree cd unitree mkdir src cd src git clone https://github.com.cnpmjs.org/unitreerobotics/unitree_ros.git //同样可以到自己电脑上下载完拷贝 接下来按照文档里说的，打开主文件夹里的.bashrc文件， 在主文件夹打开终端，输入：
+gedit .bashrc 在文档末尾添加
+source /opt/ros/melodic/setup.bash source /usr/share/gazebo-8/setup.sh//如果报错的话，可以删掉这一行 source ~/catkin_ws/devel/setup.bash export ROS_PACKAGE_PATH=~/catkin_ws:${ROS_PACKAGE_PATH} export GAZEBO_PLUGIN_PATH=~/catkin_ws/devel/lib:${GAZEBO_PLUGIN_PATH} export LD_LIBRARY_PATH=~/catkin_ws/devel/lib:${LD_LIBRARY_PATH} #3_1, 3_2 export UNITREE_SDK_VERSION=3_2//看是SDK的版本是3_1还是3_2.'><title>宇树机器狗手势控制</title>
+
+<link rel='canonical' href='https://SZTU-ZBK.github.io/post/blog/'>
+
+<link rel="stylesheet" href="/scss/style.min.5a8e892f6fa14515e9065eee1f5d2e05302606ec7f11750b2fb95198f9cdcbfd.css"><meta property='og:title' content='宇树机器狗手势控制'>
+<meta property='og:description' content='在上一篇博客的基础上，结合手势识别和实验室的unitreeA1机器狗做了一个机器狗的手势控制,可以实现手势控制机器狗的前后左右平动。
+前期准备 1、需要对ROS的话题通信机制及其环境配置有一定了解。 2、建议先在Windows上跑通上一篇博客的手势识别模型再来进行机器狗的手势控制。 3、宇树A1机器狗，GO1以及其他机器狗的配置同理。 4、机器狗内置电脑上的环境配置： ①Python版本应为3.8（必要条件） ②视觉识别依赖包：Opencv,Mediapipe,; ③Unitree官方发布的ROS_to_Real包，版本选择最早发布的版本（或unitree后续发布的支持A1机器狗的版本）。 ④ROS开发环境建议用VScode。 ⑤在Windows下载VncViewer以进行远程桌面连接，防止调试运动程序过程中损坏机器狗。 ⑥由于ROS Melodic所用为Python2，但Mediapipe和Opencv支持的版本为Python3.8，因此需要进行虚拟环境配置，下文会详细展开。
+环境配置教程 2.1 ROS_to_Real包以及SDK的编译安装 这一部分需要先认真阅读官方的Readme文档，确认各种依赖以及版本都是正确的。 官方网址：unitreerobotics/unitree_ros_to_real (github.com) 首先进入主文件夹，输入 ：
+git clone https://github.com/unitreerobotics/unitree_legged_sdk.git //也可以采用镜像源 // git clone https://github.com.cnpmjs.org/unitreerobotics/unitree_legged_sdk.git //也可以直接用自己的电脑到官网下载，然后再用U盘拷贝到机器狗上即可，记得先看Readme里支持的版本。 输入cd unitree_legged_sdk/进入文件夹 然后按照readme里的步骤，在终端依次输入
+mkdir build cd build cmake ../ make 接着创建工作空间，安装宇树的功能包
+mkdir unitree cd unitree mkdir src cd src git clone https://github.com.cnpmjs.org/unitreerobotics/unitree_ros.git //同样可以到自己电脑上下载完拷贝 接下来按照文档里说的，打开主文件夹里的.bashrc文件， 在主文件夹打开终端，输入：
+gedit .bashrc 在文档末尾添加
+source /opt/ros/melodic/setup.bash source /usr/share/gazebo-8/setup.sh//如果报错的话，可以删掉这一行 source ~/catkin_ws/devel/setup.bash export ROS_PACKAGE_PATH=~/catkin_ws:${ROS_PACKAGE_PATH} export GAZEBO_PLUGIN_PATH=~/catkin_ws/devel/lib:${GAZEBO_PLUGIN_PATH} export LD_LIBRARY_PATH=~/catkin_ws/devel/lib:${LD_LIBRARY_PATH} #3_1, 3_2 export UNITREE_SDK_VERSION=3_2//看是SDK的版本是3_1还是3_2.'>
+<meta property='og:url' content='https://SZTU-ZBK.github.io/post/blog/'>
+<meta property='og:site_name' content='My New Hugo Site'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2022-07-29T12:50:22&#43;08:00'/><meta property='article:modified_time' content='2022-07-29T12:50:22&#43;08:00'/>
+<meta name="twitter:title" content="宇树机器狗手势控制">
+<meta name="twitter:description" content="在上一篇博客的基础上，结合手势识别和实验室的unitreeA1机器狗做了一个机器狗的手势控制,可以实现手势控制机器狗的前后左右平动。
+前期准备 1、需要对ROS的话题通信机制及其环境配置有一定了解。 2、建议先在Windows上跑通上一篇博客的手势识别模型再来进行机器狗的手势控制。 3、宇树A1机器狗，GO1以及其他机器狗的配置同理。 4、机器狗内置电脑上的环境配置： ①Python版本应为3.8（必要条件） ②视觉识别依赖包：Opencv,Mediapipe,; ③Unitree官方发布的ROS_to_Real包，版本选择最早发布的版本（或unitree后续发布的支持A1机器狗的版本）。 ④ROS开发环境建议用VScode。 ⑤在Windows下载VncViewer以进行远程桌面连接，防止调试运动程序过程中损坏机器狗。 ⑥由于ROS Melodic所用为Python2，但Mediapipe和Opencv支持的版本为Python3.8，因此需要进行虚拟环境配置，下文会详细展开。
+环境配置教程 2.1 ROS_to_Real包以及SDK的编译安装 这一部分需要先认真阅读官方的Readme文档，确认各种依赖以及版本都是正确的。 官方网址：unitreerobotics/unitree_ros_to_real (github.com) 首先进入主文件夹，输入 ：
+git clone https://github.com/unitreerobotics/unitree_legged_sdk.git //也可以采用镜像源 // git clone https://github.com.cnpmjs.org/unitreerobotics/unitree_legged_sdk.git //也可以直接用自己的电脑到官网下载，然后再用U盘拷贝到机器狗上即可，记得先看Readme里支持的版本。 输入cd unitree_legged_sdk/进入文件夹 然后按照readme里的步骤，在终端依次输入
+mkdir build cd build cmake ../ make 接着创建工作空间，安装宇树的功能包
+mkdir unitree cd unitree mkdir src cd src git clone https://github.com.cnpmjs.org/unitreerobotics/unitree_ros.git //同样可以到自己电脑上下载完拷贝 接下来按照文档里说的，打开主文件夹里的.bashrc文件， 在主文件夹打开终端，输入：
+gedit .bashrc 在文档末尾添加
+source /opt/ros/melodic/setup.bash source /usr/share/gazebo-8/setup.sh//如果报错的话，可以删掉这一行 source ~/catkin_ws/devel/setup.bash export ROS_PACKAGE_PATH=~/catkin_ws:${ROS_PACKAGE_PATH} export GAZEBO_PLUGIN_PATH=~/catkin_ws/devel/lib:${GAZEBO_PLUGIN_PATH} export LD_LIBRARY_PATH=~/catkin_ws/devel/lib:${LD_LIBRARY_PATH} #3_1, 3_2 export UNITREE_SDK_VERSION=3_2//看是SDK的版本是3_1还是3_2.">
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column compact"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="Toggle Menu">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/avatar_huda2458f72ce188392d75c5d51cd8e24e_373_300x0_resize_box_3.png" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">My New Hugo Site</a></h1>
+            <h2 class="site-description"></h2>
+        </div>
+    </header><ol class="menu" id="main-menu">
+        
+        
+
+        <div class="menu-bottom-section">
+            
+            
+                <li id="dark-mode-toggle">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                    <span>Dark Mode</span>
+                </li>
+            
+        </div>
+    </ol>
+</aside>
+<main class="main full-width">
+    <article class="main-article">
+    <header class="article-header">
+
+    <div class="article-details">
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/post/blog/">宇树机器狗手势控制</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">Jul 29, 2022</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    4 minute read
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+</header>
+
+    <section class="article-content">
+    
+    
+    <p>在上一篇博客的基础上，结合手势识别和实验室的unitreeA1机器狗做了一个机器狗的手势控制,可以实现手势控制机器狗的前后左右平动。</p>
+<h2 id="前期准备">前期准备</h2>
+<p>1、需要对ROS的话题通信机制及其环境配置有一定了解。
+2、建议先在Windows上跑通上一篇博客的手势识别模型再来进行机器狗的手势控制。
+3、宇树A1机器狗，GO1以及其他机器狗的配置同理。
+4、机器狗内置电脑上的环境配置：
+①Python版本应为3.8（必要条件）
+②视觉识别依赖包：Opencv,Mediapipe,;
+③Unitree官方发布的ROS_to_Real包，版本选择最早发布的版本（或unitree后续发布的支持A1机器狗的版本）。
+④ROS开发环境建议用VScode。
+⑤在Windows下载VncViewer以进行远程桌面连接，防止调试运动程序过程中损坏机器狗。
+⑥由于ROS Melodic所用为Python2，但Mediapipe和Opencv支持的版本为Python3.8，因此需要进行虚拟环境配置，下文会详细展开。</p>
+<h2 id="环境配置教程">环境配置教程</h2>
+<h3 id="21-ros_to_real包以及sdk的编译安装">2.1 ROS_to_Real包以及SDK的编译安装</h3>
+<p>这一部分需要先认真阅读官方的Readme文档，确认各种依赖以及版本都是正确的。
+官方网址：unitreerobotics/unitree_ros_to_real (github.com)
+首先进入主文件夹，输入 ：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>git clone https://github.com/unitreerobotics/unitree_legged_sdk.git
+</span></span><span style="display:flex;"><span>//也可以采用镜像源
+</span></span><span style="display:flex;"><span>// git clone https://github.com.cnpmjs.org/unitreerobotics/unitree_legged_sdk.git
+</span></span><span style="display:flex;"><span>//也可以直接用自己的电脑到官网下载，然后再用U盘拷贝到机器狗上即可，记得先看Readme里支持的版本。
+</span></span></code></pre></div><p>输入cd unitree_legged_sdk/进入文件夹
+然后按照readme里的步骤，在终端依次输入</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mkdir build
+</span></span><span style="display:flex;"><span>cd build
+</span></span><span style="display:flex;"><span>cmake ../
+</span></span><span style="display:flex;"><span>make
+</span></span></code></pre></div><p>接着创建工作空间，安装宇树的功能包</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mkdir unitree
+</span></span><span style="display:flex;"><span>cd unitree
+</span></span><span style="display:flex;"><span>mkdir src
+</span></span><span style="display:flex;"><span>cd src
+</span></span><span style="display:flex;"><span>git clone https://github.com.cnpmjs.org/unitreerobotics/unitree_ros.git
+</span></span><span style="display:flex;"><span>//同样可以到自己电脑上下载完拷贝
+</span></span></code></pre></div><p>接下来按照文档里说的，打开主文件夹里的.bashrc文件，
+在主文件夹打开终端，输入：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>gedit .bashrc
+</span></span></code></pre></div><p>在文档末尾添加</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>source /opt/ros/melodic/setup.bash
+</span></span><span style="display:flex;"><span>source /usr/share/gazebo-8/setup.sh//如果报错的话，可以删掉这一行
+</span></span><span style="display:flex;"><span>source ~/catkin_ws/devel/setup.bash
+</span></span><span style="display:flex;"><span>export ROS_PACKAGE_PATH<span style="color:#f92672">=</span>~/catkin_ws:<span style="color:#e6db74">${</span>ROS_PACKAGE_PATH<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>export GAZEBO_PLUGIN_PATH<span style="color:#f92672">=</span>~/catkin_ws/devel/lib:<span style="color:#e6db74">${</span>GAZEBO_PLUGIN_PATH<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>export LD_LIBRARY_PATH<span style="color:#f92672">=</span>~/catkin_ws/devel/lib:<span style="color:#e6db74">${</span>LD_LIBRARY_PATH<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#3_1, 3_2</span>
+</span></span><span style="display:flex;"><span>export UNITREE_SDK_VERSION<span style="color:#f92672">=</span>3_2//看是SDK的版本是3_1还是3_2.
+</span></span><span style="display:flex;"><span>export UNITREE_LEGGED_SDK_PATH<span style="color:#f92672">=</span>~/unitree_legged_sdk
+</span></span><span style="display:flex;"><span>export ALIENGO_SDK_PATH<span style="color:#f92672">=</span>~/aliengo_sdk
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#amd64, arm32, arm64</span>
+</span></span><span style="display:flex;"><span>export UNITREE_PLATFORM<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;amd64&#34;</span>//A1前面的板子是arm,后面的是amd
+</span></span></code></pre></div><p>注意：这里要把把上述部分catkin_ws全部改成你工作空间名（如果是直接复制上面代码的话就不用改），如我的工作空间叫unitree就把catkin_ws改成unitree
+另外如果需要开发Aliengo则把export UNITREE_SDK_VERSION=3_2改export UNITREE_SDK_VERSION=3_1即可
+如果没有安装Aliengo的SDK可以把exportALIENGO_SDK_PATH=~/aliengo_sdk注释掉。
+接下来在工作空间目录下打开终端，输入：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>catkin_make
+</span></span></code></pre></div><p>一般编译不通过都是版本问题，需要仔细阅读Readme，或者Gazebo报错的话可以将其注释掉。</p>
+<h3 id="22-vscode安装以及ros开发环境的配置">2.2 VScode安装以及ROS开发环境的配置</h3>
+<p>VScode可以直接到<a class="link" href="https://code.visualstudio.com/docs?start=true"  target="_blank" rel="noopener"
+    >官网</a>上下载安装包然后打开（或者直接下载NAS上的安装包），双击即开始安装。如果觉得太慢也可以在直接电脑上下载安装包，然后拷贝到Ubuntu里，注意系统架构，A1前面的板子是arm架构，后面的板子是amd不要下错了。
+下载完成后，打开命令行，输入：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cd 你的工作空间路径
+</span></span><span style="display:flex;"><span>code .
+</span></span></code></pre></div><p>即可打开Vscode。
+要在VScode上编写ROS程序，还需要以下配置操作。
+①打开Vscode,点击这里
+<img src="https://img-blog.csdnimg.cn/af73bc05a4e34af98e1fed219106017e.png"
+	
+	
+	
+	loading="lazy"
+	
+		alt="在这里插入图片描述"
+	
+	
+>
+②搜索ROS，C++，Python，CMake，以及catkin_tool插件并下载，如图：
+<img src="https://img-blog.csdnimg.cn/27352a4b71d8454899955f40174a6a53.png"
+	
+	
+	
+	loading="lazy"
+	
+		alt="在这里插入图片描述"
+	
+	
+>
+③然后ctrl + shfit + b，点击第一行右边的小齿轮
+将里面的内容替换如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>// 有关 tasks.json 格式的文档，请参见
+</span></span><span style="display:flex;"><span>    // https://go.microsoft.com/fwlink/?LinkId<span style="color:#f92672">=</span><span style="color:#ae81ff">733558</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;version&#34;</span>: <span style="color:#e6db74">&#34;2.0.0&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;tasks&#34;</span>: <span style="color:#f92672">[</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;label&#34;</span>: <span style="color:#e6db74">&#34;catkin_make:debug&#34;</span>, //代表提示的描述性信息
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;shell&#34;</span>,  //可以选择shell或者process,如果是shell代码是在shell里面运行一个命令，如果是process代表作为一个进程来运行
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;command&#34;</span>: <span style="color:#e6db74">&#34;catkin_make&#34;</span>,//这个是我们需要运行的命令
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;args&#34;</span>: <span style="color:#f92672">[]</span>,//如果需要在命令后面加一些后缀，可以写在这里，比如-DCATKIN_WHITELIST_PACKAGES<span style="color:#f92672">=</span>“pac1;pac2”
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;group&#34;</span>: <span style="color:#f92672">{</span><span style="color:#e6db74">&#34;kind&#34;</span>:<span style="color:#e6db74">&#34;build&#34;</span>,<span style="color:#e6db74">&#34;isDefault&#34;</span>:true<span style="color:#f92672">}</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;presentation&#34;</span>: <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;reveal&#34;</span>: <span style="color:#e6db74">&#34;always&#34;</span>//可选always或者silence，代表是否输出信息
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">}</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;problemMatcher&#34;</span>: <span style="color:#e6db74">&#34;</span>$msCompile<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><p>④然后打开c_cpp_properties.json文件，将Cpp标准修改如下：
+<img src="https://img-blog.csdnimg.cn/18fbc6131e2d47a093abb6b80fe9e32b.png"
+	
+	
+	
+	loading="lazy"
+	
+		alt="在这里插入图片描述"
+	
+	
+>
+以上操作都要执行，否则将无法导入头文件。
+以及编写程序时，如果里面出现了中文，记得加上：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>setlocale<span style="color:#f92672">(</span>LC_CTYPE, <span style="color:#e6db74">&#34;zh_CN.utf8&#34;</span><span style="color:#f92672">)</span>;
+</span></span><span style="display:flex;"><span>setlocale<span style="color:#f92672">(</span>LC_ALL, <span style="color:#e6db74">&#34;&#34;</span><span style="color:#f92672">)</span>;
+</span></span></code></pre></div><p>2.3 Python3.8下载</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wget https://www.python.org/ftp/python/3.8.1/Python-3.8.1.tgz
+</span></span><span style="display:flex;"><span>tar -zxvf Python-3.8.1.tgz
+</span></span><span style="display:flex;"><span>cd Python-3.8.1
+</span></span><span style="display:flex;"><span>./configure
+</span></span><span style="display:flex;"><span>make
+</span></span><span style="display:flex;"><span>make test
+</span></span></code></pre></div><p>如果make test命令出现ModuleNotFoundError: No module named‘_ctypes’
+可以参考<a class="link" href="https://blog.csdn.net/u014775723/article/details/85224447"  target="_blank" rel="noopener"
+    >这篇博客</a>解决
+最后输入：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo make install
+</span></span></code></pre></div><h3 id="24-python-虚拟环境配置">2.4 Python 虚拟环境配置</h3>
+<p>因为我们的视觉程序依赖Opencv和Mediapipe，而它们需要Python3.8来运行，但是ROS依赖的又是Python2,所以我们需要配置出一个虚拟环境，将两个环境隔离开。必须下载完Python3.8之后才可以执行此操作。这一步是为了把系统当前的Python环境换成Python3.8，因此没下载Python3.8执行这一步的话会直接报错。
+原理：使用virtualenv创建一个Python3的环境。然后在这个环境中编译安装自己需要的软件包。在引用软件包的时候，如果没有对应的Python3的软件包，会自动的去Python2.7的环境里面找。这样很多软件包都是可以通用的。当然对于没有做好Python3支持的软件包也是没法用的。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mkdir catkin_ws <span style="color:#75715e"># 创建工作空间</span>
+</span></span><span style="display:flex;"><span>cd catkin_ws
+</span></span><span style="display:flex;"><span>mkdir src
+</span></span><span style="display:flex;"><span>cd src 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#创建虚拟环境</span>
+</span></span><span style="display:flex;"><span>virtualenv -p /usr/local/python3.8.1/bin/python3.8.1 venv     <span style="color:#75715e">#这一步是创建虚拟环境,路径不一定一样，仅供参考。</span>
+</span></span><span style="display:flex;"><span>source venv/bin/activate                              <span style="color:#75715e">#这一步是激活虚拟环境。</span>
+</span></span><span style="display:flex;"><span>pip install catkin_pkg pyyaml empy rospkg numpy          <span style="color:#75715e">#安装python3虚拟环境下所需的编译依赖之类的。</span>
+</span></span><span style="display:flex;"><span>catkin_make
+</span></span><span style="display:flex;"><span>source devel/setup.bash
+</span></span></code></pre></div><h3 id="25-mediapipe与opencv的安装">2.5 Mediapipe与Opencv的安装</h3>
+<p>回到上一步的工作空间目录下，激活虚拟环境，并下载安装Mediapipe与Opencv：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>source venv/bin/activate  
+</span></span></code></pre></div><p>此时命令行输入python,可以看到Python已经变成了3.8版本。
+然后开始下载Opencv和Mediapipe包(如果报错就把pip3.8换为pip或pip3)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pip3.8 install opencv-python
+</span></span><span style="display:flex;"><span>pip3.8 install mediapipe
+</span></span></code></pre></div><p>如果报错是pip版本不够，则执行</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>python3 -m pip install --upgrade pip
+</span></span></code></pre></div><p>配置完成后视觉程序即可运行，注意，不要进行编译，直接右键选择在命令行中运行即可。</p>
+<h3 id="26-远程桌面链接">2.6 远程桌面链接</h3>
+<p>先到官网下载VncViewer,然后启动机器狗，连接机器狗WiFi,密码是8个0；然后打开VNC_Viewer;
+第一行选vnc-any; 地址为192.168.123.12；密码八个0；
+如果屏幕只有三分之一，则打开命令行，输入命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>xrandr --fb 1920x1080
+</span></span></code></pre></div><p>2.6报错解决：
+如果在运行roscore时报错说python版本不对，则需要重置python软链接，将其指向python2(需要先通过whereis python命令查找python2所在路径,在命令行输入:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mv /usr/bin/python /usr/bin/python.bak
+</span></span><span style="display:flex;"><span>ln -s /usr/local/python2.7/bin/python2.7 /usr/bin/python <span style="color:#75715e">#这里的路径是python2的路径</span>
+</span></span><span style="display:flex;"><span>mv /usr/bin/pip /usr/bin/pip.bak
+</span></span><span style="display:flex;"><span>ln -s /usr/local/python3.7.1/bin/pip3 /usr/bin/pip
+</span></span></code></pre></div><p>如果缺少某些包或依赖，直接用sudo apt-get 或pip install 命令安装即可，前提是得先激活虚拟环境，在虚拟环境中下载python包。</p>
+<h3 id="关键代码">关键代码</h3>
+<p>视觉代码</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#e6db74">```</span>python
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#! /usr/bin/env python3.8</span>
+</span></span><span style="display:flex;"><span>import os
+</span></span><span style="display:flex;"><span>import sys
+</span></span><span style="display:flex;"><span>path <span style="color:#f92672">=</span> os.path.abspath<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;.&#34;</span><span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>sys.path.insert<span style="color:#f92672">(</span>0,path + <span style="color:#e6db74">&#34;/src/scripts&#34;</span><span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>from numpy import rate
+</span></span><span style="display:flex;"><span>import rospy
+</span></span><span style="display:flex;"><span>from std_msgs.msg import Int32
+</span></span><span style="display:flex;"><span>import cv2
+</span></span><span style="display:flex;"><span>import mediapipe as mp
+</span></span><span style="display:flex;"><span>import numpy as np
+</span></span><span style="display:flex;"><span>import time#用于得知当前时间
+</span></span><span style="display:flex;"><span>import HandTrackingModule  as htm
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;&#34;&#34;1.导包
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">   2.初始化节点
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">   3.创建发布者对象
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">   4.编写对象并发布数据
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> __name__<span style="color:#f92672">==</span><span style="color:#e6db74">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#2.初始化节点</span>
+</span></span><span style="display:flex;"><span>    rospy.init_node<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;vis&#34;</span><span style="color:#f92672">)</span><span style="color:#75715e">#传入节点名称</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#3.创建发布者对象</span>
+</span></span><span style="display:flex;"><span>    pub <span style="color:#f92672">=</span> rospy.Publisher<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;visual&#34;</span>,Int32,queue_size<span style="color:#f92672">=</span>10<span style="color:#f92672">)</span><span style="color:#75715e">#话题名，消息类型，消息队列，</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#4.编写对象并发布数据</span>
+</span></span><span style="display:flex;"><span>    msg <span style="color:#f92672">=</span> Int32<span style="color:#f92672">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#指定发布频率</span>
+</span></span><span style="display:flex;"><span>    rate <span style="color:#f92672">=</span> rospy.Rate<span style="color:#f92672">(</span>500<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#使用循环发布数据</span>
+</span></span><span style="display:flex;"><span>    wCam,hCam <span style="color:#f92672">=</span> 640,480
+</span></span><span style="display:flex;"><span>    cTime <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>    pTime <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>    cap <span style="color:#f92672">=</span> cv2.VideoCapture<span style="color:#f92672">(</span>2<span style="color:#f92672">)</span>//如果摄像头获取画面报错，可以把这里换成0，1，或者3
+</span></span><span style="display:flex;"><span>    cap.set<span style="color:#f92672">(</span>3,wCam<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    cap.set<span style="color:#f92672">(</span>4,hCam<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    detector <span style="color:#f92672">=</span> htm.handDetector<span style="color:#f92672">(</span>detectionCon<span style="color:#f92672">=</span>0.7<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">while</span> not rospy.is_shutdown<span style="color:#f92672">()</span>:
+</span></span><span style="display:flex;"><span>        success,img <span style="color:#f92672">=</span> cap.read<span style="color:#f92672">()</span>
+</span></span><span style="display:flex;"><span>        img <span style="color:#f92672">=</span> detector.findHands<span style="color:#f92672">(</span>img<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">#Find Hand</span>
+</span></span><span style="display:flex;"><span>        lmList <span style="color:#f92672">=</span> detector.findPosition<span style="color:#f92672">(</span>img,draw<span style="color:#f92672">=</span>False<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> len<span style="color:#f92672">(</span>lmList<span style="color:#f92672">)</span> !<span style="color:#f92672">=</span> 0:
+</span></span><span style="display:flex;"><span>            print<span style="color:#f92672">(</span>lmList<span style="color:#f92672">[</span>4<span style="color:#f92672">]</span>,lmList<span style="color:#f92672">[</span>20<span style="color:#f92672">])</span>
+</span></span><span style="display:flex;"><span>            x1 <span style="color:#f92672">=</span> lmList<span style="color:#f92672">[</span>4<span style="color:#f92672">][</span>1<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>            x2 <span style="color:#f92672">=</span> lmList<span style="color:#f92672">[</span>20<span style="color:#f92672">][</span>1<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>            y1 <span style="color:#f92672">=</span> lmList<span style="color:#f92672">[</span>12<span style="color:#f92672">][</span>2<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>            y2 <span style="color:#f92672">=</span> lmList<span style="color:#f92672">[</span>9<span style="color:#f92672">][</span>2<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>            dx<span style="color:#f92672">=</span>x1-x2
+</span></span><span style="display:flex;"><span>            dy<span style="color:#f92672">=</span>y1-y2
+</span></span><span style="display:flex;"><span>            dh<span style="color:#f92672">=</span>lmList<span style="color:#f92672">[</span>4<span style="color:#f92672">][</span>2<span style="color:#f92672">]</span>-lmList<span style="color:#f92672">[</span>17<span style="color:#f92672">][</span>2<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>            dw<span style="color:#f92672">=</span>lmList<span style="color:#f92672">[</span>12<span style="color:#f92672">][</span>1<span style="color:#f92672">]</span>-lmList<span style="color:#f92672">[</span>0<span style="color:#f92672">][</span>1<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>            print<span style="color:#f92672">(</span>dx<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>            print<span style="color:#f92672">(</span>dy<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> dh&lt;-20:
+</span></span><span style="display:flex;"><span>                print<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ok&#34;</span><span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>                print<span style="color:#f92672">(</span>dw<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> dw&lt;-5:
+</span></span><span style="display:flex;"><span>                    print<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;left&#34;</span><span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>                    flag<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">elif</span> dw&gt;5:
+</span></span><span style="display:flex;"><span>                    print<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;right&#34;</span><span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>                    flag<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">elif</span> dx&gt;10 and dy&lt;0:
+</span></span><span style="display:flex;"><span>                flag<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>                print<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;back&#34;</span><span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">elif</span> dx&lt;-15 and dy&lt;0:
+</span></span><span style="display:flex;"><span>                print<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;go ahead&#34;</span><span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>                flag<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> dy&gt;5:
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> abs<span style="color:#f92672">(</span>dh<span style="color:#f92672">)</span>&lt;40:
+</span></span><span style="display:flex;"><span>                    print<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;stop&#34;</span><span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>                    flag<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>            msg.data<span style="color:#f92672">=</span>flag
+</span></span><span style="display:flex;"><span>            rospy.loginfo<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;发布的数据是：%d&#34;</span>,msg.data<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>            pub.publish<span style="color:#f92672">(</span>msg<span style="color:#f92672">)</span>//发布数据
+</span></span><span style="display:flex;"><span>        cTime <span style="color:#f92672">=</span> time.time<span style="color:#f92672">()</span>
+</span></span><span style="display:flex;"><span>        fps <span style="color:#f92672">=</span> 1/<span style="color:#f92672">(</span>cTime-pTime<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>        pTime <span style="color:#f92672">=</span> cTime
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>        cv2.putText<span style="color:#f92672">(</span>img,f<span style="color:#e6db74">&#34;FPS:{int(fps)}&#34;</span>,<span style="color:#f92672">(</span>10,70<span style="color:#f92672">)</span>,cv2.FONT_HERSHEY_PLAIN,3,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">(</span>255,0,0<span style="color:#f92672">)</span>,3<span style="color:#f92672">)</span><span style="color:#75715e">#在图像上画出实时FPS</span>
+</span></span><span style="display:flex;"><span>        cv2.imshow<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;IMG&#34;</span>,img<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> cv2.waitKey<span style="color:#f92672">(</span>1<span style="color:#f92672">)</span> <span style="color:#f92672">==</span> ord<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;q&#34;</span><span style="color:#f92672">)</span>:
+</span></span><span style="display:flex;"><span>            break  
+</span></span></code></pre></div><p>视觉程序的详细注释请看上一篇博客，两者代码基本相同，只是多了一个判断模块和命令发布，这里都有注释。
+运动控制源码：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">/************************************************************************
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">Copyright (c) 2018-2019, Unitree Robotics.Co.Ltd. All rights reserved.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">Use of this source code is governed by the MPL-2.0 license, see LICENSE.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">************************************************************************/</span>
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;ros/ros.h&gt;//头文件导入</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;pthread.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;string&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;boost/thread.hpp&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;boost/thread/mutex.hpp&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;unitree_legged_msgs/HighCmd.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;unitree_legged_msgs/HighState.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;convert.h&#34;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;std_msgs/Int32.h&#34;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sstream&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#ifdef SDK3_1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">using</span> <span style="color:#66d9ef">namespace</span> aliengo;
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#ifdef SDK3_2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">using</span> <span style="color:#66d9ef">namespace</span> UNITREE_LEGGED_SDK;
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> flag<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>;<span style="color:#75715e">//用于标志机器狗是否发布过停止命令
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">long</span> motiontime<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>;<span style="color:#75715e">//用于标志当前机器狗接收到的命令，1是前进，2是后退，3是左转，四是停止
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> flag_sp<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">template</span><span style="color:#f92672">&lt;</span><span style="color:#66d9ef">typename</span> TLCM<span style="color:#f92672">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span><span style="color:#f92672">*</span> update_loop(<span style="color:#66d9ef">void</span><span style="color:#f92672">*</span> param)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    TLCM <span style="color:#f92672">*</span>data <span style="color:#f92672">=</span> (TLCM <span style="color:#f92672">*</span>)param;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">while</span>(ros<span style="color:#f92672">::</span>ok){
+</span></span><span style="display:flex;"><span>        data<span style="color:#f92672">-&gt;</span>Recv();
+</span></span><span style="display:flex;"><span>        usleep(<span style="color:#ae81ff">2000</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">doMsg</span>(<span style="color:#66d9ef">const</span> std_msgs<span style="color:#f92672">::</span>Int32<span style="color:#f92672">::</span>ConstPtr <span style="color:#f92672">&amp;</span>msg)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    printf(<span style="color:#e6db74">&#34;data:%d&#34;</span>,msg<span style="color:#f92672">-&gt;</span>data);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(msg<span style="color:#f92672">-&gt;</span>data<span style="color:#f92672">==</span><span style="color:#ae81ff">0</span>)<span style="color:#75715e">//只要视觉模块发布过一次停止命令，机器狗就会停下，并且不再重新运动
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    {
+</span></span><span style="display:flex;"><span>        motiontime<span style="color:#f92672">=</span><span style="color:#ae81ff">5</span>;
+</span></span><span style="display:flex;"><span>        flag<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>        printf(<span style="color:#e6db74">&#34;5&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span>(msg<span style="color:#f92672">-&gt;</span>data<span style="color:#f92672">==</span><span style="color:#ae81ff">1</span>)<span style="color:#75715e">//取出数据进行比较
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    {
+</span></span><span style="display:flex;"><span>        motiontime<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>        printf(<span style="color:#e6db74">&#34;1&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span>(msg<span style="color:#f92672">-&gt;</span>data<span style="color:#f92672">==</span><span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        motiontime<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>;
+</span></span><span style="display:flex;"><span>        printf(<span style="color:#e6db74">&#34;2&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span>(msg<span style="color:#f92672">-&gt;</span>data<span style="color:#f92672">==</span><span style="color:#ae81ff">3</span>)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        motiontime<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>;
+</span></span><span style="display:flex;"><span>        printf(<span style="color:#e6db74">&#34;3&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span>(msg<span style="color:#f92672">-&gt;</span>data<span style="color:#f92672">==</span><span style="color:#ae81ff">4</span>)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        motiontime<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>;
+</span></span><span style="display:flex;"><span>        printf(<span style="color:#e6db74">&#34;4&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (flag<span style="color:#f92672">==</span><span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        motiontime<span style="color:#f92672">=</span><span style="color:#ae81ff">5</span>;
+</span></span><span style="display:flex;"><span>        printf(<span style="color:#e6db74">&#34;%d&#34;</span>,motiontime);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">template</span><span style="color:#f92672">&lt;</span><span style="color:#66d9ef">typename</span> TCmd, <span style="color:#66d9ef">typename</span> TState, <span style="color:#66d9ef">typename</span> TLCM<span style="color:#f92672">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> mainHelper(<span style="color:#66d9ef">int</span> argc, <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>argv[], TLCM <span style="color:#f92672">&amp;</span>roslcm)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    std<span style="color:#f92672">::</span>cout <span style="color:#f92672">&lt;&lt;</span> <span style="color:#e6db74">&#34;WARNING: Control level is set to HIGH-level.&#34;</span> <span style="color:#f92672">&lt;&lt;</span> std<span style="color:#f92672">::</span>endl
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">&lt;&lt;</span> <span style="color:#e6db74">&#34;Make sure the robot is standing on the ground.&#34;</span> <span style="color:#f92672">&lt;&lt;</span> std<span style="color:#f92672">::</span>endl
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">&lt;&lt;</span> <span style="color:#e6db74">&#34;Press Enter to continue...&#34;</span> <span style="color:#f92672">&lt;&lt;</span> std<span style="color:#f92672">::</span>endl;
+</span></span><span style="display:flex;"><span>    std<span style="color:#f92672">::</span>cin.ignore();
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>    ros<span style="color:#f92672">::</span>NodeHandle n;
+</span></span><span style="display:flex;"><span>    ros<span style="color:#f92672">::</span>Rate loop_rate(<span style="color:#ae81ff">500</span>);
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// SetLevel(HIGHLEVEL);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    TCmd SendHighLCM <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
+</span></span><span style="display:flex;"><span>    TState RecvHighLCM <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
+</span></span><span style="display:flex;"><span>    unitree_legged_msgs<span style="color:#f92672">::</span>HighCmd SendHighROS;
+</span></span><span style="display:flex;"><span>    unitree_legged_msgs<span style="color:#f92672">::</span>HighState RecvHighROS;
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>    roslcm.SubscribeState();
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>    pthread_t tid;
+</span></span><span style="display:flex;"><span>    pthread_create(<span style="color:#f92672">&amp;</span>tid, NULL, update_loop<span style="color:#f92672">&lt;</span>TLCM<span style="color:#f92672">&gt;</span>, <span style="color:#f92672">&amp;</span>roslcm);
+</span></span><span style="display:flex;"><span>    ros<span style="color:#f92672">::</span>Subscriber sub <span style="color:#f92672">=</span> n.subscribe(<span style="color:#e6db74">&#34;visual&#34;</span>,<span style="color:#ae81ff">15</span>,doMsg);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">while</span> (ros<span style="color:#f92672">::</span>ok()){
+</span></span><span style="display:flex;"><span>        ros<span style="color:#f92672">::</span>spinOnce();
+</span></span><span style="display:flex;"><span>        roslcm.Get(RecvHighLCM);
+</span></span><span style="display:flex;"><span>        RecvHighROS <span style="color:#f92672">=</span> ToRos(RecvHighLCM);
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// printf(&#34;%f\n&#34;,  RecvHighROS.forwardSpeed);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> 
+</span></span><span style="display:flex;"><span>        SendHighROS.forwardSpeed <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.0f</span>;<span style="color:#75715e">//前后速度
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        SendHighROS.sideSpeed <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.0f</span>;<span style="color:#75715e">//左右速度
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        SendHighROS.rotateSpeed <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.0f</span>;<span style="color:#75715e">//旋转速度
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        SendHighROS.bodyHeight <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.0f</span>;<span style="color:#75715e">//身体高度
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> 
+</span></span><span style="display:flex;"><span>        SendHighROS.mode <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;<span style="color:#75715e">//运动模式，0为静止模式，1为调整模型，机器狗可以调整自身高度。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        SendHighROS.roll  <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;<span style="color:#75715e">//2为运动模式，机器狗发布的速度命令方才有效
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        SendHighROS.pitch <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;<span style="color:#75715e">//机器狗三个轴的角度
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        SendHighROS.yaw <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">//printf(&#34;%f\n&#34;,  RecvHighROS.forwardSpeed);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">//printf(&#34;3&#34;);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span>(motiontime<span style="color:#f92672">==</span><span style="color:#ae81ff">1</span>){
+</span></span><span style="display:flex;"><span>            SendHighROS.mode <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
+</span></span><span style="display:flex;"><span>            SendHighROS.sideSpeed <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.01f</span>;
+</span></span><span style="display:flex;"><span>            SendHighROS.forwardSpeed <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.2f</span>; <span style="color:#75715e">// -1  ~ +1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        }
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span> <span style="color:#a6e22e">if</span>(motiontime<span style="color:#f92672">==</span><span style="color:#ae81ff">2</span>){
+</span></span><span style="display:flex;"><span>            SendHighROS.mode <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
+</span></span><span style="display:flex;"><span>            SendHighROS.sideSpeed <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.01f</span>;
+</span></span><span style="display:flex;"><span>            SendHighROS.forwardSpeed <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0.2f</span>; <span style="color:#75715e">// -1  ~ +1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span> <span style="color:#a6e22e">if</span>(motiontime<span style="color:#f92672">==</span><span style="color:#ae81ff">3</span>){
+</span></span><span style="display:flex;"><span>            SendHighROS.mode <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
+</span></span><span style="display:flex;"><span>            SendHighROS.sideSpeed <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.3f</span>; <span style="color:#75715e">// -1  ~ +1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span> <span style="color:#a6e22e">if</span>(motiontime<span style="color:#f92672">==</span><span style="color:#ae81ff">4</span>){
+</span></span><span style="display:flex;"><span>            SendHighROS.mode <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
+</span></span><span style="display:flex;"><span>            SendHighROS.sideSpeed <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0.3f</span>;     
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(motiontime<span style="color:#f92672">==</span><span style="color:#ae81ff">5</span>)
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            flag<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>            SendHighROS.mode <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            printf(<span style="color:#e6db74">&#34;ok&#34;</span>);
+</span></span><span style="display:flex;"><span>            SendHighROS.forwardSpeed <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.0f</span>;
+</span></span><span style="display:flex;"><span>            SendHighROS.sideSpeed <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.0f</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// SendHighLCM = ToLcm(SendHighROS, SendHighLCM);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#75715e">// roslcm.Send(SendHighLCM);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        }
+</span></span><span style="display:flex;"><span>        SendHighLCM <span style="color:#f92672">=</span> ToLcm(SendHighROS, SendHighLCM); 
+</span></span><span style="display:flex;"><span>        roslcm.Send(SendHighLCM); <span style="color:#75715e">//发布速度消息
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        loop_rate.sleep(); <span style="color:#75715e">//用于休眠函数，控制发布频率
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">int</span> argc, <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>argv[]){
+</span></span><span style="display:flex;"><span>    ros<span style="color:#f92672">::</span>init(argc, argv, <span style="color:#e6db74">&#34;walk_ros_mode&#34;</span>);
+</span></span><span style="display:flex;"><span>    std<span style="color:#f92672">::</span>string firmwork;
+</span></span><span style="display:flex;"><span>    ros<span style="color:#f92672">::</span>param<span style="color:#f92672">::</span>get(<span style="color:#e6db74">&#34;/firmwork&#34;</span>, firmwork);
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">#ifdef SDK3_1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        aliengo<span style="color:#f92672">::</span>Control control(aliengo<span style="color:#f92672">::</span>HIGHLEVEL);
+</span></span><span style="display:flex;"><span>        aliengo<span style="color:#f92672">::</span>LCM roslcm;
+</span></span><span style="display:flex;"><span>        mainHelper<span style="color:#f92672">&lt;</span>aliengo<span style="color:#f92672">::</span>HighCmd, aliengo<span style="color:#f92672">::</span>HighState, aliengo<span style="color:#f92672">::</span>LCM<span style="color:#f92672">&gt;</span>(argc, argv, roslcm);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">#ifdef SDK3_2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        std<span style="color:#f92672">::</span>string robot_name;
+</span></span><span style="display:flex;"><span>        UNITREE_LEGGED_SDK<span style="color:#f92672">::</span>LeggedType rname;
+</span></span><span style="display:flex;"><span>        ros<span style="color:#f92672">::</span>param<span style="color:#f92672">::</span>get(<span style="color:#e6db74">&#34;/robot_name&#34;</span>, robot_name);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(strcasecmp(robot_name.c_str(), <span style="color:#e6db74">&#34;A1&#34;</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>            rname <span style="color:#f92672">=</span> UNITREE_LEGGED_SDK<span style="color:#f92672">::</span>LeggedType<span style="color:#f92672">::</span>A1;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span>(strcasecmp(robot_name.c_str(), <span style="color:#e6db74">&#34;Aliengo&#34;</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>            rname <span style="color:#f92672">=</span> UNITREE_LEGGED_SDK<span style="color:#f92672">::</span>LeggedType<span style="color:#f92672">::</span>Aliengo;
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// UNITREE_LEGGED_SDK::InitEnvironment();
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        UNITREE_LEGGED_SDK<span style="color:#f92672">::</span>LCM roslcm(UNITREE_LEGGED_SDK<span style="color:#f92672">::</span>HIGHLEVEL);
+</span></span><span style="display:flex;"><span>        mainHelper<span style="color:#f92672">&lt;</span>UNITREE_LEGGED_SDK<span style="color:#f92672">::</span>HighCmd, UNITREE_LEGGED_SDK<span style="color:#f92672">::</span>HighState, UNITREE_LEGGED_SDK<span style="color:#f92672">::</span>LCM<span style="color:#f92672">&gt;</span>(argc, argv, roslcm);
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><img src="https://img-blog.csdnimg.cn/036a3a71c6f34c109500e74745c24f5e.png"
+	
+	
+	
+	loading="lazy"
+	
+		alt="项目效果"
+	
+	
+></p>
+<p>总结：项目的最终能够实现对机器狗进行简单的前进后退，左右平移等运动控制，并且精度较高，误识率很低，在宇树A1的视觉板（性能相对较弱）上帧率能够达到12左右，刚好能够满足数据传输的需要，如果需要提高帧率的话可以将其部署在机器狗后面的运动控制板块上（性能较强），或者调节上篇文档提到的追踪置信度以及识别置信度函数（但不建议这么做），能够提高一定的帧率。
+缺陷：由于受到机器狗计算平台性能以及相机精度的限制，在距离超过3.6米时手势识别便会较为困难，如果超过4米则无法识别到手势，以及暂时还无法控制进行机器狗转向等更复杂的运动。</p>
+<p>项目进一步改进的思路：通过对模型进行裁剪或者蒸馏进一步降低模型所需计算资源（或者基于LCM的低延时通信，结合实验室的高性能服务器，将画面信息传输给服务器进行处理，再由服务器返回处理结果，可以极大提高帧率）。对于远距离识别问题，在不改变硬件的基础上，可以通过加入单目测距模块对手势距离进行测量并适当靠近手势，使机器狗保持一个较为良好的手势识别环境。而对于机器狗更复杂的运动控制，计划加入人体躯干模块（即识别全身节点），从而在视觉上判断更多具有较高辨识度的动作作为命令手势。
+参考文献
+《ubuntu安装python3.7，并更新python默认指向为python3.7》https://blog.csdn.net/u014775723/article/details/85213793?utm_source=app&amp;app_version=5.2.0
+《mediapipe安装与使用》
+<a class="link" href="https://blog.csdn.net/m0_52364694/article/details/120825352?utm_source=app&amp;app_version=5.2.0"  target="_blank" rel="noopener"
+    >https://blog.csdn.net/m0_52364694/article/details/120825352?utm_source=app&app_version=5.2.0</a>
+《将pip从21.2.1降级到20.0.2》https://blog.csdn.net/weixin_46610458/article/details/119217108?utm_source=app&amp;app_version=5.2.0
+《linux : ubuntu 安装vscode与配置》https://blog.csdn.net/sunzhanl/article/details/121302343?utm_source=app&amp;app_version=5.2.0
+《ROS-手势控制小海龟移动》https://blog.csdn.net/weixin_39591533/article/details/120949657?utm_source=app&amp;app_version=5.2.0
+《ros melodic中c++与python3通信》https://blog.csdn.net/weixin_46813375/article/details/121387975?utm_source=app&amp;app_version=5.2.0
+《宇树机器狗开发：环境安装及遇到的一些问题》https://blog.csdn.net/BiLLyZzzzz/article/details/119936319?utm_source=app&amp;app_version=5.2.0</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2022 My New Hugo Site
+    </section>
+    
+    <section class="powerby">
+        Built with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> <br />
+        Theme <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.12.0">Stack</a></b> designed by <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a>
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+    
+
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
