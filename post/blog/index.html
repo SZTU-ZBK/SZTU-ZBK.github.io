@@ -23,7 +23,7 @@ gedit .bashrc 在文档末尾添加
 source /opt/ros/melodic/setup.bash source /usr/share/gazebo-8/setup.sh//如果报错的话，可以删掉这一行 source ~/catkin_ws/devel/setup.bash export ROS_PACKAGE_PATH=~/catkin_ws:${ROS_PACKAGE_PATH} export GAZEBO_PLUGIN_PATH=~/catkin_ws/devel/lib:${GAZEBO_PLUGIN_PATH} export LD_LIBRARY_PATH=~/catkin_ws/devel/lib:${LD_LIBRARY_PATH} #3_1, 3_2 export UNITREE_SDK_VERSION=3_2//看是SDK的版本是3_1还是3_2.'>
 <meta property='og:url' content='https://SZTU-ZBK.github.io/post/blog/'>
 <meta property='og:site_name' content='My New Hugo Site'>
-<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2022-07-29T12:50:22&#43;08:00'/><meta property='article:modified_time' content='2022-07-29T12:50:22&#43;08:00'/>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:published_time' content='2022-07-29T12:50:22&#43;08:00'/><meta property='article:modified_time' content='2022-07-29T12:50:22&#43;08:00'/><meta property='og:image' content='https://SZTU-ZBK.github.io/img/sun.jpeg' />
 <meta name="twitter:title" content="宇树机器狗手势控制">
 <meta name="twitter:description" content="在上一篇博客的基础上，结合手势识别和实验室的unitreeA1机器狗做了一个机器狗的手势控制,可以实现手势控制机器狗的前后左右平动。
 前期准备 1、需要对ROS的话题通信机制及其环境配置有一定了解。 2、建议先在Windows上跑通上一篇博客的手势识别模型再来进行机器狗的手势控制。 3、宇树A1机器狗，GO1以及其他机器狗的配置同理。 4、机器狗内置电脑上的环境配置： ①Python版本应为3.8（必要条件） ②视觉识别依赖包：Opencv,Mediapipe,; ③Unitree官方发布的ROS_to_Real包，版本选择最早发布的版本（或unitree后续发布的支持A1机器狗的版本）。 ④ROS开发环境建议用VScode。 ⑤在Windows下载VncViewer以进行远程桌面连接，防止调试运动程序过程中损坏机器狗。 ⑥由于ROS Melodic所用为Python2，但Mediapipe和Opencv支持的版本为Python3.8，因此需要进行虚拟环境配置，下文会详细展开。
@@ -32,7 +32,8 @@ git clone https://github.com/unitreerobotics/unitree_legged_sdk.git //也可以�
 mkdir build cd build cmake ../ make 接着创建工作空间，安装宇树的功能包
 mkdir unitree cd unitree mkdir src cd src git clone https://github.com.cnpmjs.org/unitreerobotics/unitree_ros.git //同样可以到自己电脑上下载完拷贝 接下来按照文档里说的，打开主文件夹里的.bashrc文件， 在主文件夹打开终端，输入：
 gedit .bashrc 在文档末尾添加
-source /opt/ros/melodic/setup.bash source /usr/share/gazebo-8/setup.sh//如果报错的话，可以删掉这一行 source ~/catkin_ws/devel/setup.bash export ROS_PACKAGE_PATH=~/catkin_ws:${ROS_PACKAGE_PATH} export GAZEBO_PLUGIN_PATH=~/catkin_ws/devel/lib:${GAZEBO_PLUGIN_PATH} export LD_LIBRARY_PATH=~/catkin_ws/devel/lib:${LD_LIBRARY_PATH} #3_1, 3_2 export UNITREE_SDK_VERSION=3_2//看是SDK的版本是3_1还是3_2.">
+source /opt/ros/melodic/setup.bash source /usr/share/gazebo-8/setup.sh//如果报错的话，可以删掉这一行 source ~/catkin_ws/devel/setup.bash export ROS_PACKAGE_PATH=~/catkin_ws:${ROS_PACKAGE_PATH} export GAZEBO_PLUGIN_PATH=~/catkin_ws/devel/lib:${GAZEBO_PLUGIN_PATH} export LD_LIBRARY_PATH=~/catkin_ws/devel/lib:${LD_LIBRARY_PATH} #3_1, 3_2 export UNITREE_SDK_VERSION=3_2//看是SDK的版本是3_1还是3_2."><meta name="twitter:card" content="img/sun.jpeg">
+    <meta name="twitter:image" content='https://SZTU-ZBK.github.io/img/sun.jpeg' />
     </head>
     <body class="
     article-page
@@ -59,7 +60,7 @@ source /opt/ros/melodic/setup.bash source /usr/share/gazebo-8/setup.sh//如果�
         }
     })();
 </script>
-<div class="container main-container flex on-phone--column compact"><aside class="sidebar left-sidebar sticky ">
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
     <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="Toggle Menu">
         <span class="hamburger-box">
             <span class="hamburger-inner"></span>
@@ -76,11 +77,13 @@ source /opt/ros/melodic/setup.bash source /usr/share/gazebo-8/setup.sh//如果�
                     
                     
                         
-                        <img src="/img/avatar_huda2458f72ce188392d75c5d51cd8e24e_373_300x0_resize_box_3.png" width="300"
+                        <img src="/img/ava_huee0e436822bd02c2753f049c175e1b49_143024_300x0_resize_q75_box.jpg" width="300"
                             height="300" class="site-logo" loading="lazy" alt="Avatar">
                     
                 
                 </a>
+                
+                    <span class="emoji">🍥</span>
                 
             </figure>
             
@@ -88,9 +91,49 @@ source /opt/ros/melodic/setup.bash source /usr/share/gazebo-8/setup.sh//如果�
         
         <div class="site-meta">
             <h1 class="site-name"><a href="/">My New Hugo Site</a></h1>
-            <h2 class="site-description"></h2>
+            <h2 class="site-description">欢迎来到我的博客空间~</h2>
         </div>
-    </header><ol class="menu" id="main-menu">
+    </header><ol class="social-menu">
+            
+                <li>
+                    <a 
+                        href='https://github.com/CaiJimmy/hugo-theme-stack'
+                        target="_blank"
+                        title="GitHub"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href='https://twitter.com'
+                        target="_blank"
+                        title="Twitter"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
         
         
 
@@ -293,10 +336,10 @@ source /opt/ros/melodic/setup.bash source /usr/share/gazebo-8/setup.sh//如果�
 		alt="在这里插入图片描述"
 	
 	
->
-以上操作都要执行，否则将无法导入头文件。
-以及编写程序时，如果里面出现了中文，记得加上：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>setlocale<span style="color:#f92672">(</span>LC_CTYPE, <span style="color:#e6db74">&#34;zh_CN.utf8&#34;</span><span style="color:#f92672">)</span>;
+></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>以上操作都要执行，否则将无法导入头文件。
+</span></span><span style="display:flex;"><span>以及编写程序时，如果里面出现了中文，记得加上：
+</span></span><span style="display:flex;"><span>setlocale<span style="color:#f92672">(</span>LC_CTYPE, <span style="color:#e6db74">&#34;zh_CN.utf8&#34;</span><span style="color:#f92672">)</span>;
 </span></span><span style="display:flex;"><span>setlocale<span style="color:#f92672">(</span>LC_ALL, <span style="color:#e6db74">&#34;&#34;</span><span style="color:#f92672">)</span>;
 </span></span></code></pre></div><p>2.3 Python3.8下载</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wget https://www.python.org/ftp/python/3.8.1/Python-3.8.1.tgz
@@ -637,6 +680,18 @@ source /opt/ros/melodic/setup.bash source /usr/share/gazebo-8/setup.sh//如果�
     <footer class="article-footer">
     
 
+    
+    <section class="article-copyright">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <path d="M14.5 9a3.5 4 0 1 0 0 6" />
+</svg>
+
+
+
+        <span>Licensed under CC BY-NC-SA 4.0</span>
+    </section>
     </footer>
 
 
@@ -650,11 +705,36 @@ source /opt/ros/melodic/setup.bash source /usr/share/gazebo-8/setup.sh//如果�
      
     
         
+    <div class="disqus-container">
+    
+</div>
+
+<style>
+    .disqus-container {
+        background-color: var(--card-background);
+        border-radius: var(--card-border-radius);
+        box-shadow: var(--shadow-l1);
+        padding: var(--card-padding);
+    }
+</style>
+
+<script>
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (typeof DISQUS == 'object') {
+            DISQUS.reset({
+                reload: true
+            });
+        }
+    })
+</script>
+
     
 
     <footer class="site-footer">
     <section class="copyright">
         &copy; 
+        
+            2020 - 
         
         2022 My New Hugo Site
     </section>
@@ -745,7 +825,48 @@ source /opt/ros/melodic/setup.bash source /usr/share/gazebo-8/setup.sh//如果�
             >
 
             </main>
-    
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">Table of contents</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#前期准备">前期准备</a></li>
+    <li><a href="#环境配置教程">环境配置教程</a>
+      <ul>
+        <li><a href="#21-ros_to_real包以及sdk的编译安装">2.1 ROS_to_Real包以及SDK的编译安装</a></li>
+        <li><a href="#22-vscode安装以及ros开发环境的配置">2.2 VScode安装以及ROS开发环境的配置</a></li>
+        <li><a href="#24-python-虚拟环境配置">2.4 Python 虚拟环境配置</a></li>
+        <li><a href="#25-mediapipe与opencv的安装">2.5 Mediapipe与Opencv的安装</a></li>
+        <li><a href="#26-远程桌面链接">2.6 远程桌面链接</a></li>
+        <li><a href="#关键代码">关键代码</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
 
         </div>
         <script 

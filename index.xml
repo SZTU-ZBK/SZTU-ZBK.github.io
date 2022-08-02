@@ -7,6 +7,67 @@
         <generator>Hugo -- gohugo.io</generator>
         <language>en-us</language>
         <lastBuildDate>Fri, 29 Jul 2022 12:50:22 +0800</lastBuildDate><atom:link href="https://SZTU-ZBK.github.io/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>Opencv&#43;Mediapipe手势识别</title>
+        <link>https://SZTU-ZBK.github.io/post/blog02/</link>
+        <pubDate>Fri, 29 Jul 2022 12:50:22 +0800</pubDate>
+        
+        <guid>https://SZTU-ZBK.github.io/post/blog02/</guid>
+        <description>&lt;h2 id=&#34;有关介绍&#34;&gt;有关介绍&lt;/h2&gt;
+&lt;p&gt;OpenCV是一个基于Apache2.0许可（开源）发行的跨平台计算机视觉和机器学习软件库，可以运行在Linux、Windows、Android和Mac OS操作系统上。 它轻量级而且高效——由一系列 C 函数和少量 C++ 类构成，同时提供了Python、Ruby、MATLAB等语言的接口，实现了图像处理和计算机视觉方面的很多通用算法。它同样支持很多的AI功能，我们这里主要用Opencv来进行图像的处理，识别工作则由Mediapipe完成，有关Opencv的函数都在之前的博客上做过说明了。&lt;/p&gt;
+&lt;p&gt;Mediapipe是谷歌的一个开源的框架，它支持许多种常见的AI功能，比如人脸检测，手势跟踪，人体姿态检测等等，这次我们需要使用到的是Mediapipe的手势模型，它是谷歌官方训练并开源的一个用于手势检测的工具，因此我们就不需要自己训练模型，只需要调用这个工具就可以了。&lt;/p&gt;
+&lt;h2 id=&#34;检测原理&#34;&gt;检测原理&lt;/h2&gt;
+&lt;p&gt;Mediapipe的hands检测模块通过训练好的模型，能够检测出人手上的21个关节节点，并返回它们在图像中的位置（三维），将它们在图像中标注并用线条连起来，就能够得到如下完整的手势，通过计算各点间的距离和深度就可以实现简单的手势判别。&lt;/p&gt;
+&lt;h2 id=&#34;关于环境配置&#34;&gt;关于环境配置&lt;/h2&gt;
+&lt;p&gt;这里我使用的是pycharm,也可以使用其他开发环境，然后在下载安装mediapipe的时候发现自己用3.9版本安装不了，后来改用了3.7就没问题了（也有可能是其他原因导致的）&lt;/p&gt;
+&lt;h2 id=&#34;程序思路&#34;&gt;程序思路 &lt;/h2&gt;
+&lt;p&gt;导入相关的函数包后，捕获笔记本内置的摄像头（当然通过修改参数也可以改为usb连接的摄像头，比如改成1），然后对函数名进行简化（不然太长了），接着调用hands模块配置识别的参数（包括识别严谨程度，追踪信任程度等等，下面有介绍），然后简化一下用来画点和线的函数，接着可以开始设置点和线的颜色及粗细，然后再将两个变量赋值为0（后面要用来计算每秒帧数），接着写一个简单的读取视频的循环（前面的博客中有这个循环，这里不做过多介绍），然后在循环中需要将BGR图像转化为RGB图像，因为mediapipe默认读入的是RGB，而Opencv是BGR，然后将转化过的图像导入模块中进行识别，接着需要得到视频中每一帧图像的高和宽，调用.shape函数即可，然后判断如果进行模块识别之后识别到了手，那么就循环所得到的坐标，调用draw_landmarks函数画出线和点，然后使用enimerate函数列出数据及其下标（这样才能标注出该关节是第几个点），接着需要用得到的坐标乘以前面用.shape得出来的函数求出真正的x,y坐标并转化为整数（这是因为media的landmark返回的是x,y在图像中的百分比坐标，我们需要乘上宽和高才能得出数值坐标），之后我们就可以应用得到的关节坐标，调用函数在关节旁边画出对应的编号，以及打印出实时的关节坐标，接下来我们用time模块写一个小算法就可以得出每秒帧数并将其写在图像上，最后判断一下，如果按下q键，就终止循环，关闭摄像头）。&lt;/p&gt;
+&lt;h2 id=&#34;源码&#34;&gt;源码&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;import cv2
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;import mediapipe as mp
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;import time#用于得知当前时间
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;cap &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; cv2.VideoCapture&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;0,cv2.CAP_DSHOW&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#捕获摄像头,0一般是笔记本的内置摄像头，1，2，3等等则是接在usb口上的摄像头&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;mpHands &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; mp.solutions.hands#简化函数名
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;hands &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; mpHands.Hands&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;False,4,1,0.7,0.7&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#配置侦测过程中的相关参数&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;mpDraw &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; mp.solutions.drawing_utils#画点用的函数
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;handLmStyle &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; mpDraw.DrawingSpec&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;color &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;0,0,255&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;,thickness &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; 5&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#点的样式，#线的样式BGR，前一个参数是颜色，后一个是粗细&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;handConStyle &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; mpDraw.DrawingSpec&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;color &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;0,255,0&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;,thickness &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; 10&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#线的样式BGR，#线的样式BGR，前一个参数是颜色，后一个是粗细&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;pTime &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;cTime &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;while&lt;/span&gt; True:#读取视频的循环
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    ret,img &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; cap.read&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#读入每一帧图像&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; ret:#如果读取不为空值，则显示画面
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        imgRGB &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; cv2.cvtColor&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;img,cv2.COLOR_BGR2RGB&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#将BGR图像转化为RGB图像，因为mediapie需要的是RGB&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        result &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; hands.process&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;imgRGB&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#导入图像进行识别&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#75715e&#34;&gt;#print(result.multi_hand_landmarks)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        imgHeight &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; img.shape&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;0&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#得到图像的高&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        imgWeight &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; img.shape&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;1&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#得到图像的宽&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; result.multi_hand_landmarks:
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; handLms in result.multi_hand_landmarks:#循环一遍所有的坐标
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                mpDraw.draw_landmarks&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;img,handLms,mpHands.HAND_CONNECTIONS,handLmStyle,handConStyle&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#画出点和线&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; i,lm in enumerate&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;handLms.landmark&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;:
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                    xPos &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; int&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;imgWeight*lm.x&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#将坐标转化为整数&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                    yPos &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; int&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;imgHeight*lm.y&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                    cv2.putText&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;img,str&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;i&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;,&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;xPos-25,yPos+5&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;,cv2.FONT_HERSHEY_PLAIN,1,&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;0,0,255&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;,2&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#将手上对应的点的编号打印在图片上&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                    print&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;i,xPos,yPos&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#将坐标打印出来&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    cTime &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; time.time&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#得到当前时间&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    fps &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; 1/&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;cTime-pTime&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#用1除以播放一帧所用时间就可以得出每秒帧数&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    pTime &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; cTime#得到这一帧结束时的时间
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    cv2.putText&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;img,f&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;FPS:{int(fps)}&amp;#34;&lt;/span&gt;,&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;30,50&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;,cv2.FONT_HERSHEY_PLAIN,2,&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;255,0,0&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;,2&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#将得到的帧数信息打印在图片上&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    cv2.imshow&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;img&amp;#34;&lt;/span&gt;, img&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#展示图片&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; cv2.waitKey&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;1&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt;ord&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;q&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;:#如果按下q键，则终止循环
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        break
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;函数介绍不是很准确详细介绍看官网比较好&#34;&gt;函数介绍（不是很准确，详细介绍看官网比较好）&lt;/h2&gt;
+&lt;p&gt;mpHands.Hands(False,4,1,0.7,0.7)：配置侦测过程中的相关参数（第六行）&lt;/p&gt;
+&lt;p&gt;False表示将要识别的不是一张单独的图片，是视频流，需要加上运动跟踪，如果改为True，则是读取单一图片，这里的4意思是最多识别4只手，这个可以自己看情况设置，1则是精准识别模式（会有一点消耗计算性能，但是影响不大，一般都带的动，改为可以降低计算负担，不过会降低精度）而第一个0.7意思是匹配程度需要大于70%，第二个0.7是追踪手部运动时的匹配程度也要大于70%，但是这两个参数设的越高，就需要越长的识别和判断时间，所以需要结合实际情况设置。&lt;/p&gt;
+&lt;p&gt;mpDraw.draw_landmarks(img,handLms,mpHands.HAND_CONNECTIONS,handLmStyle,handConStyle)：画出点和线（第二十二行）&lt;/p&gt;
+&lt;p&gt;img是传入的要画点和线的图像，handLms是点的坐标，mpHands.HAND_CONNECTIONS是线的类型，这里选的是是手势线条，handLmStyle是点的样式，handConStyle是线的样式。&lt;/p&gt;
+&lt;p&gt;cv2.putText(img,str(i),(xPos-25,yPos+5),cv2.FONT_HERSHEY_PLAIN,2,(0,0,255),2)：将手上对应的点的编号打印在图片上（二十六行）&lt;/p&gt;
+&lt;p&gt;img是传入的要打印内容的图像，str(i)是要打印的字符内容，cv2.FONT_HERSHEY_PLAIN是一种字体，1是字体的线条粗细，(0,0,255)是颜色设置，2是字体大小。&lt;/p&gt;
+&lt;p&gt;结论：mediapipe提供的识别模块还是比较方便的，同时它也提供了人体躯干，脸部检测等很多其他模块，是一个比较常用到的框架。&lt;/p&gt;
+&lt;p&gt;​&lt;/p&gt;
+</description>
+        </item>
+        <item>
         <title>宇树机器狗手势控制</title>
         <link>https://SZTU-ZBK.github.io/post/blog/</link>
         <pubDate>Fri, 29 Jul 2022 12:50:22 +0800</pubDate>
@@ -128,10 +189,10 @@
 		alt=&#34;在这里插入图片描述&#34;
 	
 	
-&gt;
-以上操作都要执行，否则将无法导入头文件。
-以及编写程序时，如果里面出现了中文，记得加上：&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;setlocale&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;LC_CTYPE, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;zh_CN.utf8&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;;
+&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;以上操作都要执行，否则将无法导入头文件。
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;以及编写程序时，如果里面出现了中文，记得加上：
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;setlocale&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;LC_CTYPE, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;zh_CN.utf8&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;;
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;setlocale&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;LC_ALL, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;;
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;2.3 Python3.8下载&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;wget https://www.python.org/ftp/python/3.8.1/Python-3.8.1.tgz
